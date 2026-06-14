@@ -1,0 +1,1637 @@
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SnapBooth</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #FDF0F5;
+  --surface:  #FFFFFF;
+  --brown:    #6B1A3A;
+  --brown2:   #9C2D5C;
+  --gold:     #E07AAC;
+  --gold-lt:  #F5B8D4;
+  --muted:    #B87098;
+  --soft:     #FAD9EA;
+  --green:    #C0396E;
+  --green-lt: #E87FAF;
+  --shadow:   rgba(107,26,58,0.10);
+  --radius:   16px;
+  --radius-lg:22px;
+}
+
+body {
+  background: var(--bg);
+  font-family: 'Outfit', sans-serif;
+  color: var(--brown);
+  min-height: 100svh;
+  overflow-x: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.4rem 0.9rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.logo {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.75rem;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.logo-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  margin-bottom: 4px;
+}
+.tagline {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 300;
+  letter-spacing: 0.03em;
+}
+
+.app-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1rem 5rem;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.2rem;
+  align-items: start;
+}
+@media(max-width: 720px) {
+  .app-wrap { grid-template-columns: 1fr; padding: 0 0.75rem 5.5rem; gap: 0.9rem; }
+}
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 16px var(--shadow);
+  overflow: hidden;
+}
+
+.viewport-card { position: relative; }
+.viewport-ratio {
+  position: relative;
+  background: #3a0020;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+}
+#video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+#frame-overlay-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+
+.auto-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 8;
+  display: none;
+}
+.auto-overlay.show { display: block; }
+
+.scan-line {
+  position: absolute; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(224,122,172,0.8), transparent);
+  animation: scanMove 2s linear infinite;
+  display: none;
+}
+.auto-overlay.show .scan-line { display: block; }
+@keyframes scanMove {
+  0%   { top: 0%; opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.corner-bracket {
+  position: absolute;
+  width: 32px; height: 32px;
+  border-color: rgba(224,122,172,0.85);
+  border-style: solid;
+}
+.cb-tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; }
+.cb-tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; }
+.cb-bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; }
+.cb-br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; }
+
+.auto-badge {
+  position: absolute; top: 10px; right: 10px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  color: var(--gold-lt);
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em;
+  padding: 4px 10px; border-radius: 40px;
+  border: 1px solid rgba(224,122,172,0.4);
+  display: none; align-items: center; gap: 5px;
+}
+.auto-badge.show { display: flex; }
+.auto-badge-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #ff4488;
+  animation: pulse-dot 1s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:0.4; transform:scale(0.7); }
+}
+
+.auto-progress-wrap {
+  position: absolute; bottom: 14px; right: 14px;
+  display: none; align-items: center; justify-content: center;
+}
+.auto-progress-wrap.show { display: flex; }
+.auto-ring {
+  width: 52px; height: 52px;
+  transform: rotate(-90deg);
+}
+.auto-ring-bg   { fill: none; stroke: rgba(255,255,255,0.15); stroke-width: 4; }
+.auto-ring-fill {
+  fill: none; stroke: var(--gold-lt); stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 138; stroke-dashoffset: 138;
+  transition: stroke-dashoffset 0.15s linear;
+}
+.auto-ring-num {
+  position: absolute;
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.2rem; color: #fff;
+  line-height: 1;
+}
+
+.countdown-badge {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-family: 'Instrument Serif', serif;
+  font-size: 4.5rem; line-height: 1;
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  display: none; align-items: center; justify-content: center;
+  border: 2px solid rgba(255,255,255,0.2);
+  transition: transform 0.15s;
+}
+.countdown-badge.show {
+  display: flex; transform: translate(-50%, -50%) scale(1);
+}
+
+.smile-prompt {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%) scale(0.85);
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.55rem; font-style: italic;
+  padding: 0.7rem 1.8rem;
+  border-radius: 50px;
+  border: 1.5px solid rgba(224,122,172,0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.smile-prompt.show {
+  opacity: 1; transform: translate(-50%,-50%) scale(1);
+}
+
+.shot-bar {
+  position: absolute; top: 12px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  color: #fff; padding: 5px 14px 5px 10px;
+  border-radius: 40px; font-size: 0.78rem; font-weight: 500;
+  display: none; align-items: center; gap: 8px;
+  white-space: nowrap;
+}
+.shot-bar.show { display: flex; }
+.dots { display: flex; gap: 5px; align-items: center; }
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255,255,255,0.28);
+  transition: all 0.2s;
+}
+.dot.done { background: var(--gold-lt); transform: scale(0.85); }
+.dot.active { background: #fff; transform: scale(1.15); box-shadow: 0 0 6px rgba(255,255,255,0.7); }
+
+.vp-controls {
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--soft);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.options-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.opt-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.opt-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pill-group { display: flex; gap: 4px; }
+.pill {
+  padding: 0.3rem 0.75rem;
+  border-radius: 40px;
+  border: 1.5px solid var(--soft);
+  background: var(--bg);
+  font-size: 0.78rem;
+  font-family: 'Outfit', sans-serif;
+  color: var(--brown);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 400;
+}
+.pill:hover { border-color: var(--gold); }
+.pill.on { background: var(--brown); color: #fff; border-color: var(--brown); font-weight: 500; }
+
+.mode-pill-group { display: flex; gap: 4px; }
+.mode-pill {
+  padding: 0.3rem 0.8rem;
+  border-radius: 40px;
+  border: 1.5px solid var(--soft);
+  background: var(--bg);
+  font-size: 0.78rem;
+  font-family: 'Outfit', sans-serif;
+  color: var(--brown);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 400;
+  display: flex; align-items: center; gap: 4px;
+}
+.mode-pill:hover { border-color: var(--gold); }
+.mode-pill.on {
+  background: var(--gold);
+  color: #fff;
+  border-color: var(--gold);
+  font-weight: 600;
+}
+
+.action-row {
+  display: flex; gap: 0.6rem; align-items: center;
+}
+.btn-capture {
+  flex: 1;
+  background: var(--brown);
+  color: #fff;
+  border: none; border-radius: var(--radius);
+  padding: 0.78rem 1rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.92rem; font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 0.45rem;
+  transition: background 0.18s, transform 0.1s, box-shadow 0.18s;
+  box-shadow: 0 4px 14px rgba(107,26,58,0.22);
+  letter-spacing: 0.01em;
+}
+.btn-capture:hover { background: var(--brown2); box-shadow: 0 6px 18px rgba(107,26,58,0.3); }
+.btn-capture:active { transform: scale(0.97); }
+.btn-capture:disabled { background: var(--muted); box-shadow: none; cursor: not-allowed; }
+.btn-capture.auto-active {
+  background: var(--gold);
+  box-shadow: 0 4px 14px rgba(224,122,172,0.4);
+}
+.btn-capture.auto-active:hover { background: #c45e90; }
+
+.btn-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  border: 1.5px solid var(--soft);
+  background: var(--bg);
+  color: var(--brown);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn-icon:hover { border-color: var(--brown); background: var(--soft); }
+
+.btn-save {
+  padding: 0.78rem 1.1rem;
+  border-radius: var(--radius);
+  border: none;
+  background: var(--green);
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.88rem; font-weight: 600;
+  cursor: pointer;
+  display: none; align-items: center; gap: 0.35rem;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+  box-shadow: 0 3px 12px rgba(192,57,110,0.28);
+}
+.btn-save.show { display: flex; }
+.btn-save:hover { background: #a02d5a; }
+.btn-save:active { transform: scale(0.97); }
+
+.btn-retake {
+  padding: 0.78rem 1rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--soft);
+  background: transparent;
+  color: var(--brown);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem; font-weight: 500;
+  cursor: pointer;
+  display: none; align-items: center; gap: 0.35rem;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-retake.show { display: flex; }
+.btn-retake:hover { background: var(--soft); }
+
+.strip-section {
+  display: none;
+  padding: 0.9rem 1rem;
+  border-top: 1px solid var(--soft);
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+.strip-section.show { display: flex; }
+.strip-canvas-wrap { flex: 1; min-width: 0; }
+#strip-canvas {
+  width: 100%; border-radius: 12px;
+  box-shadow: 0 4px 20px var(--shadow);
+  display: block;
+}
+.strip-thumbs {
+  display: flex; flex-direction: column; gap: 6px;
+  flex-shrink: 0;
+}
+@media(max-width: 480px) {
+  .strip-thumbs { flex-direction: row; }
+  .strip-section { flex-direction: column; }
+  .strip-canvas-wrap { width: 100%; }
+}
+.thumb-img {
+  width: 62px; height: 48px;
+  object-fit: cover; border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.thumb-img:hover { transform: scale(1.07); }
+.thumb-img.sel { border-color: var(--gold); }
+
+.sidebar { display: flex; flex-direction: column; gap: 0.9rem; }
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 16px var(--shadow);
+  padding: 1rem 1rem 1.1rem;
+}
+.panel-hd {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+}
+.tmpl-thumb {
+  border-radius: 10px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.15s, transform 0.13s;
+  aspect-ratio: 2/5;
+}
+.tmpl-thumb:hover { transform: scale(1.04); }
+.tmpl-thumb.sel { border-color: var(--gold); }
+.tmpl-thumb canvas { width: 100%; height: 100%; display: block; }
+.tmpl-lbl {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.5);
+  color: #fff; font-size: 8px; font-weight: 500;
+  text-align: center; padding: 3px 0;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+.frames-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+.frame-thumb {
+  aspect-ratio: 1;
+  border-radius: 11px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  overflow: hidden;
+  background: var(--soft);
+  position: relative;
+  transition: border-color 0.15s, transform 0.13s;
+}
+.frame-thumb:hover { transform: scale(1.05); }
+.frame-thumb.sel { border-color: var(--gold); }
+.frame-thumb canvas { width: 100%; height: 100%; display: block; }
+.frame-lbl {
+  position: absolute; bottom: 3px; left: 0; right: 0;
+  text-align: center; font-size: 8.5px;
+  color: var(--brown); font-weight: 500;
+}
+
+.layout-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
+}
+.layout-thumb {
+  aspect-ratio: 1; border-radius: 11px; cursor: pointer;
+  border: 2px solid transparent; background: var(--soft);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  padding: 8px; transition: border-color 0.15s, transform 0.13s;
+}
+.layout-thumb:hover { transform: scale(1.05); }
+.layout-thumb.sel { border-color: var(--gold); }
+.layout-thumb svg { width: 100%; height: auto; }
+.layout-lbl { font-size: 8.5px; color: var(--brown); font-weight: 500; text-align: center; }
+
+.sticker-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.sticker-btn {
+  font-size: 1.3rem; background: var(--soft); border: none;
+  border-radius: 10px; width: 38px; height: 38px;
+  cursor: pointer; transition: transform 0.13s, background 0.13s;
+  display: flex; align-items: center; justify-content: center;
+}
+.sticker-btn:hover { transform: scale(1.2); background: var(--bg); }
+.sticker-btn:active { transform: scale(0.92); }
+
+.gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+.gallery-item {
+  position: relative; border-radius: 10px; overflow: hidden;
+  aspect-ratio: 3/4; background: var(--soft);
+  cursor: pointer; transition: transform 0.15s;
+}
+.gallery-item:hover { transform: scale(1.03); }
+.gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gal-dl {
+  position: absolute; bottom: 5px; right: 5px;
+  background: rgba(107,26,58,0.82); color: #fff;
+  border: none; border-radius: 7px; padding: 3px 8px;
+  font-size: 0.65rem; font-family: 'Outfit', sans-serif;
+  cursor: pointer; opacity: 0; transition: opacity 0.15s;
+}
+.gallery-item:hover .gal-dl { opacity: 1; }
+.empty-gal { grid-column: 1/-1; text-align: center; color: var(--muted); font-size: 0.8rem; padding: 1.4rem 0; }
+
+.mobile-bar {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  background: rgba(253,240,245,0.96);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--soft);
+  padding: 0.7rem 1rem 1rem;
+  gap: 0.5rem;
+}
+@media(max-width: 720px) {
+  .mobile-bar { display: flex; }
+  .vp-action-hide { display: none !important; }
+}
+
+.toast {
+  position: fixed; bottom: 5.5rem; left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--brown); color: #fff;
+  padding: 0.55rem 1.25rem; border-radius: 50px;
+  font-size: 0.82rem; font-weight: 500;
+  opacity: 0; transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none; white-space: nowrap; z-index: 100;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@keyframes flash { 0%{opacity:0} 25%{opacity:1} 100%{opacity:0} }
+.flash {
+  position: absolute; inset: 0; background: white;
+  animation: flash 0.4s ease forwards; pointer-events: none; z-index: 10;
+}
+
+#upload-input { display: none; }
+
+/* ── LANDING PAGE ── */
+#landing {
+  position: fixed; inset: 0; z-index: 200;
+  background: #FDF0F5;
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+#landing.hide {
+  opacity: 0; transform: translateY(-24px); pointer-events: none;
+}
+.land-hero { text-align: center; padding: 3rem 1.5rem 1.5rem; }
+.land-logo {
+  font-family: 'Instrument Serif', serif;
+  font-size: 3.2rem; letter-spacing: -1px;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  animation: fadeUp 0.7s ease both;
+  color: var(--brown);
+}
+.land-logo-dot {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--gold); margin-bottom: 6px;
+}
+.land-tagline {
+  font-size: 1rem; color: var(--muted); font-weight: 300;
+  letter-spacing: 0.06em; margin-top: 0.4rem;
+  animation: fadeUp 0.7s 0.1s ease both;
+}
+.land-desc {
+  max-width: 480px; margin: 1rem auto 0;
+  font-size: 0.92rem; color: var(--brown2); line-height: 1.7;
+  animation: fadeUp 0.7s 0.2s ease both;
+}
+.land-strips {
+  display: flex; gap: 1.4rem; justify-content: center;
+  padding: 2rem 1.5rem 1.5rem;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  animation: fadeUp 0.7s 0.3s ease both;
+}
+.land-strip-item {
+  flex-shrink: 0; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 8px 30px rgba(107,26,58,0.18), 0 2px 8px rgba(107,26,58,0.1);
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.land-strip-item:nth-child(1) { transform: rotate(-2deg); }
+.land-strip-item:nth-child(1):hover { transform: rotate(-2deg) translateY(-8px); box-shadow: 0 18px 44px rgba(107,26,58,0.22); }
+.land-strip-item:nth-child(2) { transform: rotate(0.5deg); }
+.land-strip-item:nth-child(2):hover { transform: rotate(0.5deg) translateY(-8px); box-shadow: 0 18px 44px rgba(107,26,58,0.22); }
+.land-strip-item:nth-child(3) { transform: rotate(2.5deg); }
+.land-strip-item:nth-child(3):hover { transform: rotate(2.5deg) translateY(-8px); box-shadow: 0 18px 44px rgba(107,26,58,0.22); }
+.land-strip-item canvas { display: block; }
+.land-features {
+  display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;
+  padding: 0.5rem 1.5rem 1.5rem;
+  animation: fadeUp 0.7s 0.4s ease both;
+}
+.land-feat {
+  background: var(--surface); border-radius: 50px;
+  padding: 0.6rem 1.1rem;
+  display: flex; align-items: center; gap: 0.45rem;
+  font-size: 0.8rem; color: var(--brown2);
+  box-shadow: 0 2px 10px var(--shadow); white-space: nowrap;
+}
+.land-feat-icon { font-size: 1rem; }
+.land-cta {
+  padding: 0.5rem 1.5rem 3.5rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.8rem;
+  animation: fadeUp 0.7s 0.5s ease both;
+}
+.btn-start {
+  background: var(--brown); color: #fff;
+  border: none; border-radius: 50px;
+  padding: 1rem 3rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.05rem; font-weight: 600;
+  cursor: pointer; letter-spacing: 0.03em;
+  display: flex; align-items: center; gap: 0.5rem;
+  box-shadow: 0 6px 24px rgba(107,26,58,0.3);
+  transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
+}
+.btn-start:hover { background: var(--brown2); box-shadow: 0 10px 32px rgba(107,26,58,0.35); transform: scale(1.03); }
+.btn-start:active { transform: scale(0.97); }
+.land-note { font-size: 0.75rem; color: var(--muted); }
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(18px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+#main-app { display: none; }
+#main-app.show { display: block; }
+</style>
+</head>
+<body>
+
+<!-- LANDING PAGE -->
+<div id="landing">
+  <div class="land-hero">
+    <div class="land-logo">
+      <div class="land-logo-dot"></div>
+      SnapBooth
+    </div>
+    <div class="land-tagline">Photoboth Instan By Naufal · Gratis · Langsung Di Browser</div>
+    <p class="land-desc">Abadikan Momen Seru Bersama Teman Dan Keluarga Dalam Format Foto Strip Klasik, Langsung Dari Kamera Kamu.</p>
+  </div>
+
+  <div class="land-strips" id="land-strips"></div>
+
+  <div class="land-features">
+    <div class="land-feat"><span class="land-feat-icon">🎞</span> 8 Template Strip</div>
+    <div class="land-feat"><span class="land-feat-icon">🖼</span> 9 Bingkai Foto</div>
+    <div class="land-feat"><span class="land-feat-icon">🤖</span> Mode Auto</div>
+    <div class="land-feat"><span class="land-feat-icon">✨</span> Stiker Lucu</div>
+    <div class="land-feat"><span class="land-feat-icon">⬇</span> Simpan Langsung</div>
+  </div>
+
+  <div class="land-cta">
+    <button class="btn-start" id="btn-start">📸 Mulai Sekarang</button>
+    <span class="land-note">Tidak perlu daftar atau install apapun</span>
+  </div>
+</div>
+
+<div id="main-app">
+<header class="header">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    SnapBooth
+  </div>
+  <span class="tagline">By Naufal</span>
+</header>
+
+<div class="app-wrap">
+
+  <div class="card viewport-card">
+    <div class="viewport-ratio" id="viewport">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="frame-overlay-canvas"></canvas>
+
+      <div class="auto-overlay" id="auto-overlay">
+        <div class="scan-line"></div>
+        <div class="corner-bracket cb-tl"></div>
+        <div class="corner-bracket cb-tr"></div>
+        <div class="corner-bracket cb-bl"></div>
+        <div class="corner-bracket cb-br"></div>
+      </div>
+
+      <div class="auto-badge" id="auto-badge">
+        <div class="auto-badge-dot"></div>
+        AUTO
+      </div>
+
+      <div class="auto-progress-wrap" id="auto-progress-wrap">
+        <svg class="auto-ring" viewBox="0 0 52 52">
+          <circle class="auto-ring-bg" cx="26" cy="26" r="22"/>
+          <circle class="auto-ring-fill" id="auto-ring-fill" cx="26" cy="26" r="22"/>
+        </svg>
+        <span class="auto-ring-num" id="auto-ring-num">3</span>
+      </div>
+
+      <div class="countdown-badge" id="countdown"></div>
+      <div class="smile-prompt" id="smile-prompt">😄 Senyum!</div>
+
+      <div class="shot-bar" id="shot-bar">
+        <span id="shot-label">Foto 1/3</span>
+        <div class="dots" id="shot-dots"></div>
+      </div>
+    </div>
+
+    <div class="strip-section" id="strip-section">
+      <div class="strip-canvas-wrap">
+        <canvas id="strip-canvas"></canvas>
+      </div>
+      <div class="strip-thumbs" id="strip-thumbs"></div>
+    </div>
+
+    <div class="vp-controls">
+      <div class="options-row">
+        <div class="opt-group">
+          <span class="opt-label">Mode</span>
+          <div class="mode-pill-group">
+            <button class="mode-pill on" id="mode-manual">✋ Manual</button>
+            <button class="mode-pill" id="mode-auto">🤖 Auto</button>
+          </div>
+        </div>
+
+        <div class="opt-group">
+          <span class="opt-label">Foto</span>
+          <div class="pill-group">
+            <button class="pill" data-count="1">1</button>
+            <button class="pill on" data-count="3">3</button>
+          </div>
+        </div>
+
+        <div class="opt-group" id="timer-group">
+          <span class="opt-label">Timer</span>
+          <div class="pill-group">
+            <button class="pill on" data-sec="0">—</button>
+            <button class="pill" data-sec="3">3s</button>
+            <button class="pill" data-sec="5">5s</button>
+          </div>
+        </div>
+
+        <div class="opt-group" id="interval-group" style="display:none">
+          <span class="opt-label">Jeda</span>
+          <div class="pill-group">
+            <button class="pill" data-interval="2">2s</button>
+            <button class="pill on" data-interval="3">3s</button>
+            <button class="pill" data-interval="5">5s</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row vp-action-hide" id="desktop-actions">
+        <button class="btn-capture" id="btn-capture-d">📸 Mulai Ambil Foto</button>
+        <button class="btn-retake" id="btn-retake-d">↩ Ulangi</button>
+        <button class="btn-icon" title="Upload foto" onclick="document.getElementById('upload-input').click()">📁</button>
+        <button class="btn-save" id="btn-save-d">⬇ Simpan</button>
+        <input type="file" id="upload-input" accept="image/*" multiple>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <div class="panel">
+      <div class="panel-hd">🎞 Template Strip</div>
+      <div class="template-grid" id="template-grid"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">🖼 Bingkai Foto</div>
+      <div class="frames-grid" id="frames-grid"></div>
+    </div>
+
+    <div class="panel" id="layout-panel">
+      <div class="panel-hd">🗂 Layout Strip</div>
+      <div class="layout-grid" id="layout-grid"></div>
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:0.5rem">Berlaku untuk 3 foto</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">✨ Stiker</div>
+      <div class="sticker-row" id="sticker-row"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">📂 Galeri</div>
+      <div class="gallery-grid" id="gallery-grid">
+        <div class="empty-gal" id="empty-msg">Belum ada foto</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="mobile-bar" id="mobile-bar">
+  <button class="btn-capture" id="btn-capture-m" style="flex:1">📸 Mulai Ambil Foto</button>
+  <button class="btn-retake" id="btn-retake-m">↩</button>
+  <button class="btn-icon" onclick="document.getElementById('upload-input').click()">📁</button>
+  <button class="btn-save" id="btn-save-m">⬇</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STRIP_TEMPLATES = [
+  {
+    id: 'default', label: 'Default',
+    stripBg: (ctx, w, h) => { ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h); },
+    stripBorder: (ctx, w, h) => {},
+    labelStyle: { bg:'#fff', textColor:'#9C856A', subColor:'#C9B99A', font:"'Instrument Serif', serif", subFont:"'Outfit', sans-serif" },
+    previewBg: '#f0ebe3', previewBorder: '#C9B99A',
+  },
+  {
+    id: 'noir-gold', label: 'Noir Gold',
+    stripBg: (ctx, w, h) => { ctx.fillStyle='#0d0d0d'; ctx.fillRect(0,0,w,h); },
+    stripBorder: (ctx, w, h) => {
+      ctx.save();
+      ctx.strokeStyle='#c9a84c'; ctx.lineWidth=4; ctx.strokeRect(4,4,w-8,h-8);
+      ctx.strokeStyle='rgba(201,168,76,0.3)'; ctx.lineWidth=1; ctx.strokeRect(9,9,w-18,h-18);
+      const co = 22;
+      [[[4,4],[4+co,4],[4,4+co]], [[w-4,4],[w-4-co,4],[w-4,4+co]],
+       [[4,h-4],[4+co,h-4],[4,h-4-co]], [[w-4,h-4],[w-4-co,h-4],[w-4,h-4-co]]].forEach(([c,p1,p2])=>{
+        ctx.beginPath(); ctx.moveTo(c[0],c[1]); ctx.lineTo(p1[0],p1[1]); ctx.moveTo(c[0],c[1]); ctx.lineTo(p2[0],p2[1]);
+        ctx.strokeStyle='#c9a84c'; ctx.lineWidth=2.5; ctx.stroke();
+      });
+      ctx.restore();
+    },
+    labelStyle: { bg:'#0d0d0d', textColor:'#c9a84c', subColor:'rgba(201,168,76,0.5)', font:"'Cormorant Garamond', serif", subFont:"'DM Sans', sans-serif" },
+    previewBg: '#0d0d0d', previewBorder: '#c9a84c',
+  },
+  {
+    id: 'ivory-classic', label: 'Ivory Classic',
+    stripBg: (ctx, w, h) => {
+      ctx.fillStyle='#f8f4ec'; ctx.fillRect(0,0,w,h);
+      ctx.save(); ctx.strokeStyle='rgba(184,134,44,0.08)'; ctx.lineWidth=0.5;
+      for(let y=0;y<h;y+=8){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+      ctx.restore();
+    },
+    stripBorder: (ctx, w, h) => {
+      ctx.save();
+      ctx.strokeStyle='#c9a84c'; ctx.lineWidth=3.5; ctx.strokeRect(5,5,w-10,h-10);
+      ctx.strokeStyle='rgba(184,134,44,0.4)'; ctx.lineWidth=1; ctx.strokeRect(10,10,w-20,h-20);
+      [[5,5],[w-5,5],[5,h-5],[w-5,h-5]].forEach(([x,y])=>{
+        ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fillStyle='#c9a84c'; ctx.fill();
+      });
+      ctx.strokeStyle='rgba(184,134,44,0.5)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(w/2, 5, 18, 0, Math.PI, false); ctx.stroke();
+      ctx.beginPath(); ctx.arc(w/2, h-5, 18, Math.PI, 0, false); ctx.stroke();
+      ctx.restore();
+    },
+    labelStyle: { bg:'#f8f4ec', textColor:'#8b6914', subColor:'#c9a84c', font:"'Playfair Display', serif", subFont:"'DM Sans', sans-serif" },
+    previewBg: '#f8f4ec', previewBorder: '#c9a84c',
+  },
+  {
+    id: 'mint-sage', label: 'Mint Sage',
+    stripBg: (ctx, w, h) => { ctx.fillStyle='#d8ede4'; ctx.fillRect(0,0,w,h); },
+    stripBorder: (ctx, w, h) => {
+      ctx.save();
+      ctx.strokeStyle='#4a8c6f'; ctx.lineWidth=5; ctx.strokeRect(4,4,w-8,h-8);
+      ctx.strokeStyle='rgba(74,140,111,0.35)'; ctx.lineWidth=1; ctx.strokeRect(10,10,w-20,h-20);
+      const drawLeaf = (x, y, angle) => {
+        ctx.save(); ctx.translate(x,y); ctx.rotate(angle);
+        ctx.beginPath(); ctx.ellipse(0,-12,5,12,0,0,Math.PI*2);
+        ctx.fillStyle='rgba(74,140,111,0.5)'; ctx.fill(); ctx.restore();
+      };
+      drawLeaf(14,14,-Math.PI/4); drawLeaf(w-14,14,Math.PI/4);
+      drawLeaf(14,h-14,Math.PI+Math.PI/4); drawLeaf(w-14,h-14,Math.PI-Math.PI/4);
+      ctx.restore();
+    },
+    labelStyle: { bg:'#4a8c6f', textColor:'#ffffff', subColor:'rgba(255,255,255,0.7)', font:"'Playfair Display', serif", subFont:"'DM Sans', sans-serif" },
+    previewBg: '#d8ede4', previewBorder: '#4a8c6f',
+  },
+  {
+    id: 'pastel-holo', label: 'Pastel Holo',
+    stripBg: (ctx, w, h) => {
+      const g = ctx.createLinearGradient(0,0,w,h);
+      g.addColorStop(0,'#fce4ec'); g.addColorStop(0.33,'#e3f2fd');
+      g.addColorStop(0.66,'#f3e5f5'); g.addColorStop(1,'#e8f5e9');
+      ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+    },
+    stripBorder: (ctx, w, h) => {
+      ctx.save();
+      const gb = ctx.createLinearGradient(0,0,w,h);
+      gb.addColorStop(0,'#f48fb1'); gb.addColorStop(0.33,'#90caf9');
+      gb.addColorStop(0.66,'#ce93d8'); gb.addColorStop(1,'#a5d6a7');
+      ctx.strokeStyle=gb; ctx.lineWidth=4; ctx.strokeRect(4,4,w-8,h-8);
+      ctx.strokeStyle='rgba(180,120,200,0.3)'; ctx.lineWidth=1; ctx.strokeRect(10,10,w-20,h-20);
+      [['#f48fb1',5,5],['#90caf9',w-5,5],['#ce93d8',5,h-5],['#a5d6a7',w-5,h-5]].forEach(([c,x,y])=>{
+        ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fillStyle=c; ctx.fill();
+      });
+      ctx.restore();
+    },
+    labelStyle: { bg:'rgba(255,255,255,0.6)', textColor:'#9c6bb5', subColor:'#b07dc8', font:"'Playfair Display', serif", subFont:"'DM Sans', sans-serif" },
+    previewBg: '#f3e5f5', previewBorder: '#ce93d8',
+  },
+  {
+    id: 'film-strip', label: 'Film Strip',
+    stripBg: (ctx, w, h) => {
+      ctx.fillStyle='#161616'; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#0d0d0d'; ctx.fillRect(0,0,14,h); ctx.fillRect(w-14,0,14,h);
+    },
+    stripBorder: (ctx, w, h) => {
+      ctx.save();
+      ctx.fillStyle='#2a2a2a';
+      for(let y=14; y<h-10; y+=20) {
+        roundRectFill(ctx,2,y,9,13,2); roundRectFill(ctx,w-11,y,9,13,2);
+      }
+      ctx.strokeStyle='rgba(212,175,106,0.2)'; ctx.lineWidth=1;
+      ctx.strokeRect(17,6,w-34,h-12);
+      ctx.restore();
+    },
+    labelStyle: { bg:'#161616', textColor:'#d4af6a', subColor:'rgba(212,175,106,0.5)', font:"'DM Sans', sans-serif", subFont:"'DM Sans', sans-serif" },
+    previewBg: '#161616', previewBorder: '#d4af6a',
+  },
+  {
+    id: 'graduation', label: 'Graduation',
+    stripBg: (ctx, w, h) => { ctx.fillStyle='#f0f7ef'; ctx.fillRect(0,0,w,h); },
+    stripBorder: (ctx, w, h) => {
+      ctx.save();
+      ctx.strokeStyle='#1a3a5c'; ctx.lineWidth=5; ctx.strokeRect(4,4,w-8,h-8);
+      ctx.strokeStyle='#c9a84c'; ctx.lineWidth=1.5; ctx.strokeRect(10,10,w-20,h-20);
+      const rw=w-24, rx=12;
+      ctx.fillStyle='#1a3a5c'; ctx.fillRect(rx,4,rw,20);
+      ctx.fillStyle='#c9a84c';
+      ctx.font=`bold ${Math.floor(w*0.075)}px 'Outfit',sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('✦ GRADUATION ✦', w/2, 14);
+      ctx.fillStyle='#1a3a5c'; ctx.fillRect(rx,h-24,rw,20);
+      ctx.fillStyle='#c9a84c';
+      ctx.fillText('CLASS OF 2025', w/2, h-14);
+      ctx.fillStyle='#c9a84c';
+      [[12,12],[w-12,12],[12,h-12],[w-12,h-12]].forEach(([x,y])=>{
+        ctx.font=`${Math.floor(w*0.055)}px serif`; ctx.fillText('★',x,y);
+      });
+      ctx.restore();
+    },
+    labelStyle: { bg:'#1a3a5c', textColor:'#c9a84c', subColor:'rgba(201,168,76,0.6)', font:"'Playfair Display', serif", subFont:"'DM Sans', sans-serif", noSub:true },
+    previewBg: '#f0f7ef', previewBorder: '#1a3a5c',
+  },
+  {
+    id: 'birthday', label: 'Birthday',
+    stripBg: (ctx, w, h) => {
+      const g = ctx.createLinearGradient(0,0,0,h);
+      g.addColorStop(0,'#fff8f0'); g.addColorStop(1,'#fff0fa');
+      ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+    },
+    stripBorder: (ctx, w, h) => {
+      ctx.save();
+      const colors=['#ff6b9d','#ffd166','#06d6a0','#a29bfe','#ff6b6b'];
+      ctx.lineWidth=4;
+      const perim = 2*(w+h), dotSize=12, gap=8;
+      let dist=0, ci=0;
+      while(dist < perim) {
+        const t = dist/perim;
+        let x,y;
+        if(t < w/perim*0.5){ x=t*perim; y=0; }
+        else if(t < (w+h)/perim){ x=w; y=(t*perim-w); }
+        else if(t < (2*w+h)/perim){ x=w-(t*perim-w-h); y=h; }
+        else { x=0; y=h-(t*perim-2*w-h); }
+        ctx.beginPath(); ctx.arc(x,y,2.5,0,Math.PI*2);
+        ctx.fillStyle=colors[ci%colors.length]; ctx.fill();
+        ci++; dist+=dotSize+gap;
+      }
+      ctx.font=`${Math.floor(w*0.065)}px serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      const emojis=['🎉','🎈','✨','🎀'];
+      [[w*0.15,h*0.08],[w*0.85,h*0.08],[w*0.15,h*0.92],[w*0.85,h*0.92]].forEach(([x,y],i)=>{
+        ctx.fillText(emojis[i],x,y);
+      });
+      ctx.restore();
+    },
+    labelStyle: { bg:'linear-gradient(90deg,#ff6b9d,#ffd166)', textColor:'#fff', subColor:'rgba(255,255,255,0.8)', font:"'Playfair Display', serif", subFont:"'DM Sans', sans-serif" },
+    previewBg: '#fff0fa', previewBorder: '#ff6b9d',
+  },
+];
+
+const FRAMES = [
+  { id:'none',     label:'Polos',    draw: drawNone },
+  { id:'classic',  label:'Classic',  draw: drawClassic },
+  { id:'polaroid', label:'Polaroid', draw: drawPolaroid },
+  { id:'vintage',  label:'Vintage',  draw: drawVintage },
+  { id:'floral',   label:'Bunga',    draw: drawFloral },
+  { id:'neon',     label:'Neon',     draw: drawNeon },
+  { id:'film',     label:'Film',     draw: drawFilm },
+  { id:'pastel',   label:'Pastel',   draw: drawPastel },
+  { id:'hearts',   label:'Hearts',   draw: drawHearts },
+];
+
+const LAYOUTS = [
+  { id:'vertical',   label:'Vertikal',
+    svg:`<svg viewBox="0 0 40 60" fill="none"><rect x="2" y="2" width="36" height="56" rx="3" fill="#FAD9EA"/><rect x="5" y="5" width="30" height="15" rx="2" fill="#E07AAC"/><rect x="5" y="23" width="30" height="15" rx="2" fill="#E07AAC"/><rect x="5" y="41" width="30" height="15" rx="2" fill="#E07AAC"/></svg>`,
+    build: buildVertical },
+  { id:'horizontal', label:'Horizont.',
+    svg:`<svg viewBox="0 0 70 36" fill="none"><rect x="1" y="1" width="68" height="34" rx="3" fill="#FAD9EA"/><rect x="4" y="4" width="19" height="28" rx="2" fill="#E07AAC"/><rect x="26" y="4" width="19" height="28" rx="2" fill="#E07AAC"/><rect x="48" y="4" width="19" height="28" rx="2" fill="#E07AAC"/></svg>`,
+    build: buildHorizontal },
+  { id:'collage',    label:'Kolase',
+    svg:`<svg viewBox="0 0 50 50" fill="none"><rect x="2" y="2" width="46" height="46" rx="3" fill="#FAD9EA"/><rect x="5" y="5" width="40" height="20" rx="2" fill="#E07AAC"/><rect x="5" y="28" width="18" height="16" rx="2" fill="#E07AAC"/><rect x="27" y="28" width="18" height="16" rx="2" fill="#E07AAC"/></svg>`,
+    build: buildCollage },
+];
+
+const STICKERS = ['🌸','⭐','🎀','🌈','💖','🦋','🍀','🎉','🌙','✨','🔥','🎶'];
+
+let stream=null, currentFrame='none', currentLayout='vertical', currentTemplate='default';
+let photoCount=3, timerSeconds=0, autoInterval=3;
+let isAutoMode=false, autoAbortCtrl=null;
+let shots=[], stripDataURL=null, isShooting=false;
+
+const video = document.getElementById('video');
+const overlayCanvas = document.getElementById('frame-overlay-canvas');
+const ctxOvr = overlayCanvas.getContext('2d');
+const countdown = document.getElementById('countdown');
+const viewport = document.getElementById('viewport');
+const shotBar = document.getElementById('shot-bar');
+const shotLabel = document.getElementById('shot-label');
+const shotDots = document.getElementById('shot-dots');
+const stripSection = document.getElementById('strip-section');
+const stripCanvas = document.getElementById('strip-canvas');
+const stripThumbs = document.getElementById('strip-thumbs');
+const autoOverlay  = document.getElementById('auto-overlay');
+const autoBadge    = document.getElementById('auto-badge');
+const autoProgressWrap = document.getElementById('auto-progress-wrap');
+const autoRingFill = document.getElementById('auto-ring-fill');
+const autoRingNum  = document.getElementById('auto-ring-num');
+const smilePrompt  = document.getElementById('smile-prompt');
+
+const btnsCapture = [document.getElementById('btn-capture-d'), document.getElementById('btn-capture-m')];
+const btnsRetake  = [document.getElementById('btn-retake-d'),  document.getElementById('btn-retake-m')];
+const btnsSave    = [document.getElementById('btn-save-d'),    document.getElementById('btn-save-m')];
+
+function setCaptureDisabled(v) { btnsCapture.forEach(b=>b.disabled=v); }
+function showRetake(v)  { btnsRetake.forEach(b=>b.classList.toggle('show',v)); }
+function showSave(v)    { btnsSave.forEach(b=>b.classList.toggle('show',v)); }
+
+async function startCamera(){
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+    video.srcObject = stream;
+    drawLiveOverlay();
+  } catch(e){ showToast('Kamera tidak tersedia. Gunakan Upload.'); }
+}
+
+function drawLiveOverlay(){
+  if(isShooting) return;
+  requestAnimationFrame(drawLiveOverlay);
+  const w=overlayCanvas.offsetWidth, h=overlayCanvas.offsetHeight;
+  overlayCanvas.width=w; overlayCanvas.height=h;
+  ctxOvr.clearRect(0,0,w,h);
+  const f=FRAMES.find(f=>f.id===currentFrame);
+  if(f) f.draw(ctxOvr,w,h);
+}
+
+document.getElementById('mode-manual').addEventListener('click',()=>{
+  if(!isAutoMode) return;
+  if(isShooting){ cancelAutoSession(); }
+  isAutoMode=false;
+  document.getElementById('mode-manual').classList.add('on');
+  document.getElementById('mode-auto').classList.remove('on');
+  document.getElementById('timer-group').style.display='';
+  document.getElementById('interval-group').style.display='none';
+  autoOverlay.classList.remove('show');
+  autoBadge.classList.remove('show');
+  btnsCapture.forEach(b=>{ b.classList.remove('auto-active'); });
+  updateCaptureLabel();
+});
+
+document.getElementById('mode-auto').addEventListener('click',()=>{
+  if(isAutoMode) return;
+  isAutoMode=true;
+  document.getElementById('mode-auto').classList.add('on');
+  document.getElementById('mode-manual').classList.remove('on');
+  document.getElementById('timer-group').style.display='none';
+  document.getElementById('interval-group').style.display='';
+  autoOverlay.classList.add('show');
+  autoBadge.classList.add('show');
+  btnsCapture.forEach(b=>b.classList.add('auto-active'));
+  updateCaptureLabel();
+});
+
+function updateCaptureLabel(){
+  const lbl = isAutoMode
+    ? `🤖 Mulai Auto (${photoCount} Foto)`
+    : (photoCount===1 ? '📸 Ambil Foto' : `📸 Mulai Ambil ${photoCount} Foto`);
+  btnsCapture.forEach(b=>{ if(!isShooting) b.textContent=lbl; });
+}
+
+document.querySelectorAll('[data-interval]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-interval]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); autoInterval=parseInt(b.dataset.interval);
+}));
+
+const RING_CIRCUM = 138;
+function setRingProgress(frac){ autoRingFill.style.strokeDashoffset = RING_CIRCUM * (1 - frac); }
+
+btnsCapture.forEach(b=>b.addEventListener('click', handleCaptureClick));
+
+function handleCaptureClick(){
+  if(isShooting){
+    if(isAutoMode) return;
+    takeOneShot();
+    return;
+  }
+  shots=[]; stripDataURL=null;
+  stripSection.classList.remove('show');
+  stripThumbs.innerHTML='';
+  showRetake(false); showSave(false);
+
+  if(isAutoMode){
+    startAutoSession();
+  } else {
+    isShooting=true;
+    shotBar.classList.add('show');
+    updateDots(0);
+    shotLabel.textContent=`Foto 1/${photoCount}`;
+    btnsCapture.forEach(b=>{ b.textContent='📸 Ambil Foto 1'; });
+    takeOneShot();
+  }
+}
+
+async function startAutoSession(){
+  isShooting=true;
+  autoAbortCtrl = { cancelled: false };
+  const ctrl = autoAbortCtrl;
+
+  shotBar.classList.add('show');
+  updateDots(0);
+  shotLabel.textContent=`Foto 1/${photoCount}`;
+  btnsCapture.forEach(b=>{ b.textContent='⏹ Stop'; b.classList.add('auto-active'); b.disabled=false; });
+  btnsCapture.forEach(b=>{ b.onclick = ()=>{ if(isShooting && isAutoMode) cancelAutoSession(); }; });
+
+  for(let i=0; i<photoCount; i++){
+    if(ctrl.cancelled) break;
+    updateDots(i);
+    shotLabel.textContent=`Foto ${i+1}/${photoCount}`;
+
+    smilePrompt.classList.add('show');
+    await sleep(600);
+    if(ctrl.cancelled) break;
+    smilePrompt.classList.remove('show');
+
+    if(autoInterval > 0){
+      autoProgressWrap.classList.add('show');
+      const steps = autoInterval * 20;
+      for(let s=0; s<=steps; s++){
+        if(ctrl.cancelled) break;
+        const frac = s/steps;
+        setRingProgress(frac);
+        autoRingNum.textContent = Math.ceil(autoInterval - frac*autoInterval) || '📸';
+        await sleep(50);
+      }
+      autoProgressWrap.classList.remove('show');
+    }
+
+    if(ctrl.cancelled) break;
+    captureShot();
+    flashEffect();
+    await sleep(300);
+  }
+
+  if(!ctrl.cancelled){ finishShooting(); }
+}
+
+function cancelAutoSession(){
+  if(autoAbortCtrl) autoAbortCtrl.cancelled=true;
+  autoProgressWrap.classList.remove('show');
+  smilePrompt.classList.remove('show');
+  shotBar.classList.remove('show');
+  isShooting=false;
+  shots=[];
+  restoreCaptureButton();
+  showToast('Auto sesi dibatalkan');
+}
+
+function finishShooting(){
+  shotBar.classList.remove('show');
+  isShooting=false;
+  restoreCaptureButton();
+  buildStrip();
+}
+
+function restoreCaptureButton(){
+  btnsCapture.forEach(b=>{ b.onclick = handleCaptureClick; b.disabled=false; });
+  updateCaptureLabel();
+}
+
+let currentShotIdx = 0;
+async function takeOneShot(){
+  if(!isShooting) return;
+  setCaptureDisabled(true);
+  updateDots(currentShotIdx);
+  shotLabel.textContent = `Foto ${currentShotIdx+1}/${photoCount}`;
+  if(timerSeconds > 0) await doCountdown(timerSeconds);
+  captureShot();
+  flashEffect();
+  await sleep(300);
+  currentShotIdx++;
+  if(currentShotIdx < photoCount){
+    updateDots(currentShotIdx);
+    shotLabel.textContent = `Foto ${currentShotIdx+1}/${photoCount}`;
+    btnsCapture.forEach(b => { b.textContent = `📸 Ambil Foto ${currentShotIdx+1}`; b.disabled = false; });
+  } else {
+    currentShotIdx = 0;
+    finishShooting();
+  }
+}
+
+function captureShot(){
+  const vw=video.videoWidth||640, vh=video.videoHeight||480;
+  const c=document.createElement('canvas'); c.width=vw; c.height=vh;
+  const ctx=c.getContext('2d');
+  ctx.save(); ctx.translate(vw,0); ctx.scale(-1,1);
+  ctx.drawImage(video,0,0,vw,vh);
+  ctx.restore();
+  shots.push(c.toDataURL('image/jpeg',0.92));
+}
+
+function updateDots(idx=-1){
+  shotDots.innerHTML='';
+  for(let i=0;i<photoCount;i++){
+    const d=document.createElement('div');
+    d.className='dot'+(i<idx?' done':i===idx?' active':'');
+    shotDots.appendChild(d);
+  }
+}
+
+function doCountdown(sec){
+  return new Promise(res=>{
+    let left=sec;
+    countdown.textContent=left; countdown.classList.add('show');
+    const iv=setInterval(()=>{
+      left--;
+      if(left<=0){ clearInterval(iv); countdown.classList.remove('show'); res(); }
+      else countdown.textContent=left;
+    },1000);
+  });
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function flashEffect(){
+  const fl=document.createElement('div'); fl.className='flash';
+  viewport.appendChild(fl); setTimeout(()=>fl.remove(),450);
+}
+
+btnsRetake.forEach(b=>b.addEventListener('click',()=>{
+  shots=[]; stripDataURL=null;
+  stripSection.classList.remove('show');
+  stripThumbs.innerHTML='';
+  showRetake(false); showSave(false);
+  showToast('Siap untuk foto ulang!');
+}));
+
+btnsSave.forEach(b=>b.addEventListener('click',()=>{
+  if(!stripDataURL) return;
+  const a=document.createElement('a');
+  a.href=stripDataURL; a.download=`snapbooth-${Date.now()}.png`; a.click();
+  showToast('Strip berhasil disimpan! 🎉');
+}));
+
+document.getElementById('upload-input').addEventListener('change',async e=>{
+  const files=Array.from(e.target.files).slice(0,photoCount);
+  if(!files.length) return;
+  shots=[];
+  for(const f of files) shots.push(await readFile(f));
+  while(shots.length<photoCount) shots.push(shots[shots.length-1]);
+  if(files.length<photoCount) showToast(`${files.length} foto diupload, sisanya diduplikat.`);
+  buildStrip();
+  e.target.value='';
+});
+function readFile(f){ return new Promise(res=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(f); }); }
+
+function roundRectFill(ctx,x,y,w,h,r){
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+  ctx.fill();
+}
+
+async function buildStrip(){
+  const layout=LAYOUTS.find(l=>l.id===currentLayout);
+  const frame=FRAMES.find(f=>f.id===currentFrame);
+  const tmpl=STRIP_TEMPLATES.find(t=>t.id===currentTemplate);
+  const imgs=await Promise.all(shots.map(loadImg));
+  const framed=imgs.map(img=>applyFrame(img,frame));
+  layout.build(framed,frame,tmpl);
+  showRetake(true); showSave(true);
+  stripThumbs.innerHTML='';
+  framed.forEach((c,i)=>{
+    const th=document.createElement('img');
+    th.src=c.toDataURL(); th.className='thumb-img'; th.title=`Foto ${i+1}`;
+    stripThumbs.appendChild(th);
+  });
+  stripSection.classList.add('show');
+  addToGallery(stripDataURL);
+}
+
+function applyFrame(img,frame){
+  const c=document.createElement('canvas');
+  c.width=img.naturalWidth||img.width; c.height=img.naturalHeight||img.height;
+  const ctx=c.getContext('2d');
+  ctx.drawImage(img,0,0);
+  if(frame) frame.draw(ctx,c.width,c.height);
+  return c;
+}
+
+function loadImg(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=src; }); }
+
+function drawTemplateLabel(ctx, tmpl, W, H, labelH) {
+  const ls = tmpl.labelStyle;
+  if(ls.bg && ls.bg.startsWith('linear')) {
+    const parts = ls.bg.match(/#[0-9a-fA-F]{6}/g)||[];
+    if(parts.length>=2){ const g=ctx.createLinearGradient(0,0,W,0); g.addColorStop(0,parts[0]); g.addColorStop(1,parts[1]); ctx.fillStyle=g; }
+    else ctx.fillStyle='#fff';
+  } else {
+    ctx.fillStyle = ls.bg||'#fff';
+  }
+  ctx.fillRect(0, H-labelH, W, labelH);
+  const midY = H - labelH/2;
+  const gap = Math.floor(labelH * 0.22);
+  ctx.fillStyle = ls.textColor||'#555';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const fSize = Math.max(16, Math.floor(W * 0.088));
+  ctx.font = `italic ${fSize}px ${ls.font}`;
+  ctx.fillText('SnapBooth', W/2, ls.noSub ? midY : midY - gap);
+  if(!ls.noSub){
+    ctx.fillStyle = ls.subColor||'#aaa';
+    const subSize = Math.max(11, Math.floor(W * 0.042));
+    ctx.font = `300 ${subSize}px ${ls.subFont||"'DM Sans',sans-serif"}`;
+    ctx.fillText('By Naufal', W/2, midY + gap);
+  }
+}
+
+function buildVertical(fr, frame, tmpl){
+  const W=420, P=20, G=10, LBLH=80;
+  const pH=Math.round((fr[0].height/fr[0].width)*(W-P*2));
+  const H=P*2+pH*fr.length+G*(fr.length-1)+LBLH;
+  const sc=stripCanvas; sc.width=W; sc.height=H;
+  const ctx=sc.getContext('2d');
+  tmpl.stripBg(ctx,W,H);
+  fr.forEach((c,i)=>ctx.drawImage(c,P,P+i*(pH+G),W-P*2,pH));
+  drawTemplateLabel(ctx,tmpl,W,H,LBLH);
+  tmpl.stripBorder(ctx,W,H);
+  stripDataURL=sc.toDataURL('image/png');
+}
+
+function buildHorizontal(fr, frame, tmpl){
+  const H=300, P=14, G=8, LBLH=68;
+  const pW=Math.round((fr[0].width/fr[0].height)*(H-P*2-LBLH));
+  const W=P*2+pW*fr.length+G*(fr.length-1);
+  const sc=stripCanvas; sc.width=W; sc.height=H;
+  const ctx=sc.getContext('2d');
+  tmpl.stripBg(ctx,W,H);
+  fr.forEach((c,i)=>ctx.drawImage(c,P+i*(pW+G),P,pW,H-P*2-LBLH));
+  drawTemplateLabel(ctx,tmpl,W,H,LBLH);
+  tmpl.stripBorder(ctx,W,H);
+  stripDataURL=sc.toDataURL('image/png');
+}
+
+function buildCollage(fr, frame, tmpl){
+  const W=440, P=14, G=8, LBLH=76;
+  const tH=Math.round((W-P*2)*0.56);
+  const bH=Math.round((W-P*2)*0.38);
+  const H=P*2+tH+G+bH+LBLH;
+  const hw=Math.floor((W-P*2-G)/2);
+  const sc=stripCanvas; sc.width=W; sc.height=H;
+  const ctx=sc.getContext('2d');
+  tmpl.stripBg(ctx,W,H);
+  ctx.drawImage(fr[0],P,P,W-P*2,tH);
+  ctx.drawImage(fr[1],P,P+tH+G,hw,bH);
+  ctx.drawImage(fr[2],P+hw+G,P+tH+G,hw,bH);
+  drawTemplateLabel(ctx,tmpl,W,H,LBLH);
+  tmpl.stripBorder(ctx,W,H);
+  stripDataURL=sc.toDataURL('image/png');
+}
+
+document.querySelectorAll('[data-count]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-count]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); photoCount=parseInt(b.dataset.count);
+  document.getElementById('layout-panel').style.display=photoCount===3?'':'none';
+  updateCaptureLabel();
+}));
+
+document.querySelectorAll('[data-sec]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-sec]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); timerSeconds=parseInt(b.dataset.sec);
+}));
+
+const tmplGrid = document.getElementById('template-grid');
+STRIP_TEMPLATES.forEach(t => {
+  const wrap = document.createElement('div');
+  wrap.className='tmpl-thumb' + (t.id==='default'?' sel':'');
+  wrap.style.background = t.previewBg;
+  wrap.style.border = `2px solid ${t.id==='default'?'var(--gold)':t.previewBorder}`;
+  const c = document.createElement('canvas');
+  c.width = 80; c.height = 200;
+  const ctx = c.getContext('2d');
+  t.stripBg(ctx, 80, 200);
+  ctx.fillStyle='rgba(0,0,0,0.18)';
+  [36,82,128].forEach(y=>{ ctx.fillRect(8,y,64,38); });
+  const ls=t.labelStyle;
+  if(ls.bg&&ls.bg.startsWith('linear')){
+    const ps=ls.bg.match(/#[0-9a-fA-F]{6}/g)||[];
+    if(ps.length>=2){const g=ctx.createLinearGradient(0,0,80,0);g.addColorStop(0,ps[0]);g.addColorStop(1,ps[1]);ctx.fillStyle=g;}
+    else ctx.fillStyle='rgba(255,255,255,0.9)';
+  } else { ctx.fillStyle=ls.bg||'#fff'; }
+  ctx.fillRect(0,170,80,30);
+  ctx.fillStyle=ls.textColor||'#555';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font=`italic 10px ${ls.font}`;
+  ctx.fillText('SnapBooth',40,178);
+  ctx.fillStyle=ls.subColor||'#aaa';
+  ctx.font=`8px sans-serif`;
+  ctx.fillText('By Naufal',40,194);
+  t.stripBorder(ctx,80,200);
+  wrap.appendChild(c);
+  const lbl=document.createElement('div'); lbl.className='tmpl-lbl'; lbl.textContent=t.label;
+  wrap.appendChild(lbl);
+  wrap.addEventListener('click',()=>{
+    document.querySelectorAll('.tmpl-thumb').forEach(x=>x.classList.remove('sel'));
+    wrap.classList.add('sel'); currentTemplate=t.id;
+    if(shots.length) buildStrip();
+  });
+  tmplGrid.appendChild(wrap);
+});
+
+const framesGrid=document.getElementById('frames-grid');
+FRAMES.forEach(f=>{
+  const wrap=document.createElement('div');
+  wrap.className='frame-thumb'+(f.id==='none'?' sel':'');
+  const c=document.createElement('canvas'); c.width=80; c.height=80;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#fad9ea'; ctx.fillRect(0,0,80,80);
+  ctx.fillStyle='#e07aac'; ctx.beginPath(); ctx.arc(40,29,12,0,Math.PI*2); ctx.fill();
+  ctx.fillRect(28,42,24,20);
+  f.draw(ctx,80,80);
+  const lbl=document.createElement('div'); lbl.className='frame-lbl'; lbl.textContent=f.label;
+  wrap.appendChild(c); wrap.appendChild(lbl);
+  wrap.addEventListener('click',()=>{
+    document.querySelectorAll('.frame-thumb').forEach(t=>t.classList.remove('sel'));
+    wrap.classList.add('sel'); currentFrame=f.id;
+    if(shots.length) buildStrip();
+  });
+  framesGrid.appendChild(wrap);
+});
+
+const layoutGrid=document.getElementById('layout-grid');
+LAYOUTS.forEach(l=>{
+  const wrap=document.createElement('div');
+  wrap.className='layout-thumb'+(l.id==='vertical'?' sel':'');
+  wrap.innerHTML=l.svg+`<div class="layout-lbl">${l.label}</div>`;
+  wrap.addEventListener('click',()=>{
+    document.querySelectorAll('.layout-thumb').forEach(t=>t.classList.remove('sel'));
+    wrap.classList.add('sel'); currentLayout=l.id;
+    if(shots.length) buildStrip();
+  });
+  layoutGrid.appendChild(wrap);
+});
+
+STICKERS.forEach(em=>{
+  const b=document.createElement('button'); b.className='sticker-btn'; b.textContent=em;
+  b.addEventListener('click',()=>{
+    if(!stripDataURL){ showToast('Ambil foto dulu!'); return; }
+    const img=new Image();
+    img.onload=()=>{
+      const ctx=stripCanvas.getContext('2d');
+      const sz=Math.floor(stripCanvas.width*0.07);
+      ctx.font=`${sz}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(em, Math.floor(stripCanvas.width*(0.15+Math.random()*0.7)), Math.floor(stripCanvas.height*(0.1+Math.random()*0.8)));
+      stripDataURL=stripCanvas.toDataURL('image/png');
+    };
+    img.src=stripDataURL;
+  });
+  document.getElementById('sticker-row').appendChild(b);
+});
+
+function addToGallery(url){
+  const g=document.getElementById('gallery-grid');
+  const em=document.getElementById('empty-msg'); if(em) em.remove();
+  const item=document.createElement('div'); item.className='gallery-item';
+  const img=document.createElement('img'); img.src=url;
+  const dl=document.createElement('button'); dl.className='gal-dl'; dl.textContent='⬇ Simpan';
+  dl.addEventListener('click',e=>{ e.stopPropagation(); const a=document.createElement('a'); a.href=url; a.download=`snapbooth-${Date.now()}.png`; a.click(); });
+  item.appendChild(img); item.appendChild(dl);
+  g.insertBefore(item, g.firstChild);
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+function drawNone(){}
+function drawClassic(ctx,w,h){
+  const b=Math.floor(w*0.042); ctx.save();
+  ctx.strokeStyle='#E07AAC'; ctx.lineWidth=b; ctx.strokeRect(b/2,b/2,w-b,h-b);
+  ctx.strokeStyle='#6B1A3A'; ctx.lineWidth=b*0.28; ctx.strokeRect(b+b*0.42,b+b*0.42,w-(b*2+b*0.84),h-(b*2+b*0.84));
+  ctx.restore();
+}
+function drawPolaroid(ctx,w,h){
+  ctx.save();
+  const bs=Math.floor(w*0.05), bb=Math.floor(h*0.17);
+  ctx.fillStyle='rgba(255,255,255,0.9)';
+  ctx.fillRect(0,0,w,bs); ctx.fillRect(0,0,bs,h); ctx.fillRect(w-bs,0,bs,h); ctx.fillRect(0,h-bb,w,bb);
+  ctx.fillStyle='#B87098'; ctx.font=`${Math.floor(w*0.052)}px 'Instrument Serif',serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('📷 SnapBooth',w/2,h-bb/2);
+  ctx.restore();
+}
+function drawVintage(ctx,w,h){
+  ctx.save(); const b=Math.floor(w*0.05);
+  const gr=ctx.createRadialGradient(w/2,h/2,Math.min(w,h)*0.28,w/2,h/2,Math.max(w,h)*0.72);
+  gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(107,26,58,0.52)');
+  ctx.fillStyle=gr; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='#E07AAC'; ctx.lineWidth=Math.floor(w*0.022); ctx.strokeRect(b,b,w-b*2,h-b*2);
+  ctx.strokeStyle='rgba(224,122,172,0.45)'; ctx.lineWidth=Math.floor(w*0.01); ctx.strokeRect(b*1.5,b*1.5,w-b*3,h-b*3);
+  [[b,b],[w-b,b],[b,h-b],[w-b,h-b]].forEach(([x,y])=>{ ctx.save(); ctx.translate(x,y); ctx.fillStyle='#E07AAC'; ctx.beginPath(); ctx.arc(0,0,b*0.38,0,Math.PI*2); ctx.fill(); ctx.restore(); });
+  ctx.restore();
+}
+function drawFloral(ctx,w,h){
+  ctx.save(); const b=Math.floor(w*0.04);
+  ctx.strokeStyle='#9C2D5C'; ctx.lineWidth=b*2; ctx.strokeRect(b,b,w-b*2,h-b*2);
+  const fl=['🌸','🌺','🌼','🌻']; ctx.font=`${Math.floor(w*0.068)}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  const sp=Math.floor(w*0.12);
+  for(let x=sp;x<w-sp/2;x+=sp){ ctx.fillText(fl[Math.floor(x/sp)%4],x,b*0.82); ctx.fillText(fl[Math.floor(x/sp+2)%4],x,h-b*0.82); }
+  const vs=Math.floor(h*0.14);
+  for(let y=vs;y<h-vs/2;y+=vs){ ctx.fillText('🍃',b*0.82,y); ctx.fillText('🍃',w-b*0.82,y); }
+  ctx.restore();
+}
+function drawNeon(ctx,w,h){
+  ctx.save(); const b=Math.floor(w*0.04);
+  ctx.fillStyle='rgba(0,0,22,0.14)'; ctx.fillRect(0,0,w,h);
+  ctx.shadowColor='#ff69b4'; ctx.shadowBlur=18; ctx.strokeStyle='#ff69b4'; ctx.lineWidth=Math.floor(w*0.024); ctx.strokeRect(b,b,w-b*2,h-b*2);
+  ctx.shadowColor='#ff1493'; ctx.strokeStyle='#ff1493'; ctx.lineWidth=Math.floor(w*0.011); ctx.strokeRect(b*2,b*2,w-b*4,h-b*4);
+  ctx.restore();
+}
+function drawFilm(ctx,w,h){
+  ctx.save(); const st=Math.floor(w*0.075);
+  ctx.fillStyle='#181818'; ctx.fillRect(0,0,st,h); ctx.fillRect(w-st,0,st,h);
+  ctx.fillStyle='#f0e8e0';
+  const hH=Math.floor(h*0.048), hW=Math.floor(st*0.5), gY=hH*2.2;
+  for(let y=hH;y<h-hH;y+=gY){ roundRect(ctx,st*0.25,y,hW,hH,3); ctx.fill(); roundRect(ctx,w-st*0.75,y,hW,hH,3); ctx.fill(); }
+  ctx.restore();
+}
+function drawPastel(ctx,w,h){
+  ctx.save(); const b=Math.floor(w*0.042);
+  const cs=['#ffb3c6','#ffd6a5','#caffbf','#a0c4ff','#bdb2ff'];
+  const sg=Math.floor(w/cs.length);
+  cs.forEach((c,i)=>{ ctx.fillStyle=c; ctx.fillRect(i*sg,0,sg+2,b*1.1); ctx.fillRect(i*sg,h-b*1.1,sg+2,b*1.1); });
+  const vs=Math.floor(h/cs.length);
+  cs.forEach((c,i)=>{ ctx.fillStyle=c; ctx.fillRect(0,i*vs,b*1.1,vs+2); ctx.fillRect(w-b*1.1,i*vs,b*1.1,vs+2); });
+  ctx.restore();
+}
+function drawHearts(ctx,w,h){
+  ctx.save(); const b=Math.floor(w*0.042);
+  ctx.strokeStyle='#f77fb1'; ctx.lineWidth=b*1.4; ctx.strokeRect(b*0.7,b*0.7,w-b*1.4,h-b*1.4);
+  ctx.font=`${Math.floor(w*0.062)}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  const sp=Math.floor(w*0.11);
+  for(let x=sp;x<w;x+=sp){ ctx.fillText('💗',x,b*0.65); ctx.fillText('💗',x,h-b*0.65); }
+  const vs=Math.floor(h*0.13);
+  for(let y=vs;y<h;y+=vs){ ctx.fillText('💗',b*0.65,y); ctx.fillText('💗',w-b*0.65,y); }
+  ctx.restore();
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+}
+
+function buildLandingStrips() {
+  const container = document.getElementById('land-strips');
+  const samples = [
+    { tmpl: STRIP_TEMPLATES.find(t=>t.id==='noir-gold'), colors: ['#2a1a0a','#3d2510','#1a0f06'], W:150, photoH:80, photos:3, gap:6, pad:10, lblH:72 },
+    { tmpl: STRIP_TEMPLATES.find(t=>t.id==='ivory-classic'), colors: ['#8B7355','#A0856A','#6B5840'], W:150, photoH:80, photos:3, gap:6, pad:10, lblH:72 },
+    { tmpl: STRIP_TEMPLATES.find(t=>t.id==='birthday'), colors: ['#d4a0b5','#b08ab0','#c4a0c0'], W:150, photoH:80, photos:3, gap:6, pad:10, lblH:72 },
+  ];
+  samples.forEach(s => {
+    const photoAreaH = s.photos * s.photoH + (s.photos-1)*s.gap;
+    const H = s.pad*2 + photoAreaH + s.lblH;
+    const c = document.createElement('canvas'); c.width = s.W; c.height = H;
+    const ctx = c.getContext('2d');
+    s.tmpl.stripBg(ctx, s.W, H);
+    s.colors.forEach((col, i) => {
+      const y = s.pad + i*(s.photoH + s.gap);
+      const grd = ctx.createLinearGradient(s.pad, y, s.W-s.pad, y+s.photoH);
+      grd.addColorStop(0, col); grd.addColorStop(1, shadeColor(col, 30));
+      ctx.fillStyle = grd;
+      const rx=4, px=s.pad, py2=y, pw=s.W-s.pad*2, ph=s.photoH;
+      ctx.beginPath();
+      ctx.moveTo(px+rx,py2); ctx.lineTo(px+pw-rx,py2); ctx.quadraticCurveTo(px+pw,py2,px+pw,py2+rx);
+      ctx.lineTo(px+pw,py2+ph-rx); ctx.quadraticCurveTo(px+pw,py2+ph,px+pw-rx,py2+ph);
+      ctx.lineTo(px+rx,py2+ph); ctx.quadraticCurveTo(px,py2+ph,px,py2+ph-rx);
+      ctx.lineTo(px,py2+rx); ctx.quadraticCurveTo(px,py2,px+rx,py2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      const cx = s.W/2, cy = y + s.photoH*0.38, r = s.photoH*0.18;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.beginPath(); ctx.ellipse(cx, y+s.photoH*0.78, r*1.4, r*1.1, 0, 0, Math.PI*2); ctx.fill();
+    });
+    drawTemplateLabel(ctx, s.tmpl, s.W, H, s.lblH);
+    s.tmpl.stripBorder(ctx, s.W, H);
+    const wrap = document.createElement('div'); wrap.className = 'land-strip-item';
+    wrap.appendChild(c); container.appendChild(wrap);
+  });
+}
+
+function shadeColor(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, (n>>16)+amt);
+  const g = Math.min(255, ((n>>8)&0xff)+amt);
+  const b = Math.min(255, (n&0xff)+amt);
+  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+
+function startApp() {
+  const landing = document.getElementById('landing');
+  landing.classList.add('hide');
+  setTimeout(() => {
+    landing.style.display = 'none';
+    const app = document.getElementById('main-app');
+    app.classList.add('show');
+    startCamera();
+  }, 500);
+}
+
+document.getElementById('btn-start').addEventListener('click', startApp);
+buildLandingStrips();
+</script>
+</div>
+</body>
+</html>
